@@ -139,8 +139,12 @@ def main():
                 cluster_id = kp_model.predict(features, categorical=[0,1,2,3,4])[0]
                 
                 # Risk Score (Distance Logic)
+                # Risk Score (Distance Logic)
                 if safe_ref is not None:
                     weighted_feat = features[0][:len(feat_imp)] * feat_imp
                     weighted_safe = safe_ref[:len(feat_imp)] * feat_imp
                     risk_val = cdist([weighted_feat], [weighted_safe], metric='euclidean')[0][0]
-                    risk_score = min(100, risk_val *
+                    # This line below was missing the closing parenthesis ')'
+                    risk_score = min(100, risk_val * 15) 
+                else:
+                    risk_score = 50.0 # Default fallback
