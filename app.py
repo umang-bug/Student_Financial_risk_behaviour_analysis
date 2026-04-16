@@ -11,13 +11,16 @@ st.set_page_config(page_title="Student Financial Profiler", layout="wide")
 
 # --- LOAD ASSETS ---
 def load_lottieurl(url):
-    r = requests.get(url)
-    if r.status_code != 200:
+    try:
+        r = requests.get(url, timeout=10)
+        if r.status_code != 200:
+            return None
+        return r.json()
+    except Exception:
         return None
-    return r.json()
 
-lottie_sphere = load_lottieurl("https://assets5.lottiefiles.com/packages/lf20_m6cu9dqc.json") # Spinning Tech Sphere
-
+# Use this verified URL for a spinning data/tech sphere
+lottie_sphere = load_lottieurl("https://lottie.host/8636f333-3330-4e33-875c-352b2f67644d/I9XGZl2Y1O.json")
 # --- LOAD MODELS & ENCODERS ---
 # Note: Ensure these files are in your 'models/' folder
 @st.cache_resource
@@ -34,7 +37,10 @@ def main():
     # 1. LANDING PAGE
     if 'survey_started' not in st.session_state:
         st.session_state.survey_started = False
-
+    if lottie_sphere:
+        st_lottie(lottie_sphere, height=400, key="initial_sphere")
+    else:
+        st.image("https://cdn-icons-png.flaticon.com/512/2103/2103633.png", width=200) # Fallback if link fails
     if not st.session_state.survey_started:
         st.markdown("<h1 style='text-align: center;'>Student Financial Behavior & Risk Profiler</h1>", unsafe_allow_html=True)
         st_lottie(lottie_sphere, height=400, key="initial_sphere")
