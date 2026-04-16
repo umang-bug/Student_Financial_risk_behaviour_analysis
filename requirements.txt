@@ -1,0 +1,9 @@
+streamlit
+streamlit-lottie
+pandas
+numpy
+scikit-learn
+tensorflow
+joblib
+kmodes
+scipy
