@@ -5,126 +5,168 @@ import joblib
 import tensorflow as tf
 from streamlit_lottie import st_lottie
 import requests
+from scipy.spatial.distance import cdist
 
-# --- SET PAGE CONFIG ---
-st.set_page_config(page_title="Student Financial Profiler", layout="wide")
+# --- PAGE CONFIG ---
+st.set_page_config(page_title="Student Financial Profiler", layout="wide", initial_sidebar_state="collapsed")
 
-# --- LOAD ASSETS ---
+# --- CUSTOM CSS FOR PROFESSIONAL LOOK ---
+st.markdown("""
+    <style>
+    .main { background-color: #0e1117; color: white; }
+    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #262730; color: white; }
+    .stMetric { background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- LOAD ASSETS SAFELY ---
 def load_lottieurl(url):
     try:
-        r = requests.get(url, timeout=10)
-        if r.status_code != 200:
-            return None
-        return r.json()
-    except Exception:
-        return None
+        r = requests.get(url, timeout=5)
+        return r.json() if r.status_code == 200 else None
+    except: return None
 
-# Use this verified URL for a spinning data/tech sphere
 lottie_sphere = load_lottieurl("https://lottie.host/8636f333-3330-4e33-875c-352b2f67644d/I9XGZl2Y1O.json")
-# --- LOAD MODELS & ENCODERS ---
-# Note: Ensure these files are in your 'models/' folder
-@st.cache_resource
-def load_artifacts():
-    oe = joblib.load('models/ordinal_encoder.joblib')
-    mms = joblib.load('models/scaler.joblib')
-    kp = joblib.load('models/kproto_model.joblib')
-    rf = joblib.load('models/risk_rf_model.joblib')
-    nn = tf.keras.models.load_model('models/spend_nn_model.h5')
-    return oe, mms, kp, rf, nn
 
-# --- MAIN APP ---
+# --- LOAD MODELS ---
+@st.cache_resource
+def load_models():
+    scaler = joblib.load('models/scaler.joblib')
+    encoders = joblib.load('models/label_encoders.joblib')
+    kp_model = joblib.load('models/kproto_model.joblib')
+    rf_model = joblib.load('models/risk_rf_model.joblib')
+    nn_model = tf.keras.models.load_model('models/spend_nn_model.h5')
+    safe_ref = joblib.load('models/safe_reference.joblib')
+    feat_imp = joblib.load('models/feature_importances.joblib')
+    return scaler, encoders, kp_model, rf_model, nn_model, safe_ref, feat_imp
+
+# Initialize Session States
+if 'step' not in st.session_state: st.session_state.step = "Home"
+
+# --- MAIN APP LOGIC ---
 def main():
-    # 1. LANDING PAGE
-    if 'survey_started' not in st.session_state:
-        st.session_state.survey_started = False
-    if lottie_sphere:
-        st_lottie(lottie_sphere, height=400, key="initial_sphere")
-    else:
-        st.image("https://cdn-icons-png.flaticon.com/512/2103/2103633.png", width=200) # Fallback if link fails
-    if not st.session_state.survey_started:
+    # 1. HOME PAGE
+    if st.session_state.step == "Home":
         st.markdown("<h1 style='text-align: center;'>Student Financial Behavior & Risk Profiler</h1>", unsafe_allow_html=True)
-        st_lottie(lottie_sphere, height=400, key="initial_sphere")
+        if lottie_sphere:
+            st_lottie(lottie_sphere, height=400, key="home_sphere")
+        else:
+            st.markdown("<h1 style='text-align: center;'>🌐</h1>", unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns([1,1,1])
-        with col2:
-            if st.button("Begin Financial Analysis", use_container_width=True):
-                st.session_state.survey_started = True
+        if col2.button("Start Financial Analysis"):
+            st.session_state.step = "User_Info"
+            st.rerun()
+
+    # 2. USER REGISTRATION
+    elif st.session_state.step == "User_Info":
+        st.header("Step 1: Personal Details")
+        with st.form("user_details"):
+            name = st.text_input("Full Name")
+            age = st.number_input("Age", 17, 30, 20)
+            gender = st.selectbox("Gender", ["Male", "Female", "Other"])
+            if st.form_submit_button("Proceed to Survey"):
+                st.session_state.user_name = name
+                st.session_state.step = "Survey"
                 st.rerun()
 
-    # 2. SURVEY & INPUT PAGE
-    else:
-        st.sidebar.header("Personal Details")
-        name = st.sidebar.text_input("Full Name")
-        age = st.sidebar.number_input("Age", min_value=16, max_value=30, value=20)
-        gender = st.sidebar.selectbox("Gender", ["Male", "Female", "Other"])
+    # 3. THE SURVEY [cite: 13, 31, 79, 137]
+    elif st.session_state.step == "Survey":
+        st.header(f"Financial Journey for {st.session_state.user_name}")
+        scaler, encoders, kp_model, rf_model, nn_model, safe_ref, feat_imp = load_models()
 
-        st.header("Financial Habits Survey")
+        with st.form("ml_survey"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                place = st.selectbox("Where did you grow up?", ["🏙️ Big metro city", "🏢 Medium-sized city", "🏘️ Small town", "🌾 Rural area"])
+                track = st.selectbox("How do you track expenses?", ["I check my bank balance occasionally.", "I review my history within payment apps (e.g., UPI, Paytm).", "I do not keep the track", "I use a dedicated expense-tracking app or spreadsheet."])
+                graph = st.selectbox("Select your spending pattern graph:", ["Uniform Daily Expenses", "Irregular and Random Spending", "Spend a lot once and then low spending for rest", "Steady Weekdays with High Weekends"])
+
+            with col2:
+                unplanned = st.slider("Unplanned purchase frequency (1-5)", 1, 5)
+                confidence = st.slider("Financial management confidence (1-5)", 1, 5)
+                peer_infl = st.slider("Peer pressure influence (1-5)", 1, 5)
+
+            st.write("---")
+            st.write("**Purchase Importance (Scale)**")
+            c1, c2, c3, c4 = st.columns(4)
+            p_price = c1.select_slider("Price", ["Not important", "Slightly important", "Very important"])
+            p_brand = c2.select_slider("Brand", ["Not important", "Slightly important", "Very important"])
+            p_peer = c3.select_slider("Peer Rec", ["Not important", "Slightly important", "Very important"])
+            p_util = c4.select_slider("Utility", ["Not important", "Slightly important", "Very important"])
+
+            st.write("---")
+            st.write("**Major Budget Categories**")
+            b_cols = st.columns(5)
+            b_food = b_cols[0].checkbox("Food")
+            b_travel = b_cols[1].checkbox("Travel")
+            b_fashion = b_cols[2].checkbox("Fashion")
+            b_sub = b_cols[3].checkbox("Subs")
+            b_fun = b_cols[4].checkbox("Entertainment")
+
+            if st.form_submit_button("Generate My Profile"):
+                # --- PREPROCESSING ---
+                # 1. Encode Categoricals
+                input_data = {
+                    'Place_Grew_Up': place, 'Track_Expenditures': track, 'Expenditure_Graph': graph,
+                    'Price_Importance': p_price, 'Brand_Importance': p_brand, 
+                    'Peer_Importance': p_peer, 'Utility_Importance': p_util
+                }
+                
+                encoded_vals = []
+                for col, val in input_data.items():
+                    encoded_vals.append(encoders[col].transform([val])[0])
+                
+                # 2. Scale Numerics
+                scaled_nums = scaler.transform([[unplanned, peer_infl, confidence]])[0]
+                
+                # 3. Create Feature Vector for NN
+                # (Matches Cleaned_Data.csv structure)
+                features = np.array([encoded_vals + list(scaled_nums) + [int(b_food), int(b_travel), int(b_fashion), int(b_sub), int(b_fun)]])
+                
+                # --- PREDICTIONS ---
+                # A. Monthly Spend (NN Softmax)
+                spend_pred = np.argmax(nn_model.predict(features)) + 1
+                
+                # B. Cluster (K-Prototypes)
+                cluster_id = kp_model.predict(features, categorical=[0,1,2,3,4,5,6])[0]
+                
+                # C. Risk Score (RF Weighted Distance)
+                weighted_feat = features[0][:len(feat_imp)] * feat_imp
+                weighted_safe = safe_ref[:len(feat_imp)] * feat_imp
+                dist = cdist([weighted_feat], [weighted_safe], metric='euclidean')[0][0]
+                risk_score = min(100, max(0, dist * 20)) # Normalized 1-100
+
+                # --- DASHBOARD ---
+                st.session_state.results = {
+                    'spend': spend_pred, 'cluster': cluster_id, 'risk': risk_score
+                }
+                st.session_state.step = "Dashboard"
+                st.rerun()
+
+    # 4. RESULTS DASHBOARD
+    elif st.session_state.step == "Dashboard":
+        st.header(f"Financial Risk Analysis: {st.session_state.user_name}")
+        res = st.session_state.results
         
-        # --- INPUT FORM ---
-        with st.form("survey_form"):
-            # Categorical Inputs [cite: 13, 15-17, 19]
-            place = st.selectbox("Place you grew up in?", ["🏙️ Big metro city", "🏢 Medium-sized city", "🏘️ Small town", "🌾 Rural area"])
-            
-            # Importance Grid [cite: 31, 35-40]
-            st.write("How important are these factors when purchasing?")
-            col_a, col_b = st.columns(2)
-            price_imp = col_a.select_slider("Price/Cost", options=["Not important", "Slightly important", "Very important"])
-            brand_imp = col_b.select_slider("Brand Reputation", options=["Not important", "Slightly important", "Very important"])
-            peer_imp = col_a.select_slider("Peer Recommendation", options=["Not important", "Slightly important", "Very important"])
-            util_imp = col_b.select_slider("Long-term Utility", options=["Not important", "Slightly important", "Very important"])
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Expected Monthly Spend", f"Tier {res['spend']}")
+        c2.metric("Behavior Cluster", f"Group {res['cluster']}")
+        
+        risk_color = "normal" if res['risk'] < 40 else "inverse"
+        c3.metric("Financial Risk Score", f"{res['risk']:.1f}/100", delta_color=risk_color)
 
-            # Behavioral Scales [cite: 20-25, 66-74, 90-97]
-            unplanned = st.slider("Frequency of unplanned purchases (1-5)", 1, 5)
-            confidence = st.slider("Financial Management Confidence (1-5)", 1, 5)
-            peer_infl = st.slider("Peer pressure influence (1-5)", 1, 5)
+        if res['risk'] > 60:
+            st.error("⚠️ HIGH RISK DETECTED: Consider reviewing your unplanned purchases and subscription costs.")
+        elif res['risk'] > 30:
+            st.warning("⚠️ MODERATE RISK: You are managing well, but peer influence is affecting your savings.")
+        else:
+            st.success("✅ LOW RISK: Excellent financial discipline!")
 
-            # Tracking & Graph [cite: 79-89, 137, 213-217]
-            track = st.selectbox("How do you track expenses?", [
-                "I check my bank balance occasionally.",
-                "I review my history within payment apps (e.g., UPI, Paytm).",
-                "I do not keep the track",
-                "I use a dedicated expense-tracking app or spreadsheet."
-            ])
-            
-            graph = st.selectbox("Which graph represents your monthly spending?", [
-                "Uniform Daily Expenses", 
-                "Irregular and Random Spending", 
-                "Spend a lot once and then low spending for rest", 
-                "Steady Weekdays with High Weekends"
-            ])
-
-            # Budget Categories [cite: 98-113]
-            st.write("Select major budget categories:")
-            b_food = st.checkbox("Food & Dining")
-            b_travel = st.checkbox("Travel")
-            b_fashion = st.checkbox("Fashion")
-            b_sub = st.checkbox("Subscriptions")
-            b_fun = st.checkbox("Fun & Entertainment")
-
-            submit = st.form_submit_button("Analyze My Profile")
-
-        if submit:
-            # --- PREPROCESSING LOGIC ---
-            # Replicating your Ordinal and Scaling logic [cite: 7]
-            # (Note: You'll need to add your specific transformation code here 
-            # based on the objects loaded in load_artifacts)
-            
-            with st.spinner('Calculating your financial DNA...'):
-                # 1. Run Neural Network for Spend
-                # 2. Feed Spend + Inputs into K-Proto for Cluster
-                # 3. Feed all into Random Forest for Risk Score
-                
-                st.success(f"Analysis Complete for {name}!")
-                
-                # --- DASHBOARD DISPLAY ---
-                res_col1, res_col2, res_col3 = st.columns(3)
-                res_col1.metric("Predicted Monthly Spend", "₹XXXX")
-                res_col2.metric("Behavior Cluster", "Medium Spender")
-                res_col3.metric("Risk Score", "Low Risk", delta="-5% Improvement")
-                
-                # Warning System [cite: 8]
-                if "High Risk" in "Risk Level":
-                    st.warning("⚠️ Warning: Your current habits suggest a high financial risk profile.")
+        if st.button("Restart Analysis"):
+            st.session_state.step = "Home"
+            st.rerun()
 
 if __name__ == "__main__":
     main()
