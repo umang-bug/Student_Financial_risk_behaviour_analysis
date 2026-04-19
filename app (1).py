@@ -209,7 +209,7 @@ if "results" not in st.session_state:
 # ══════════════════════════════════════════════════════════════
 def format_spend(tier_float):
     amount = 0
-    for i in range(1, 10):
+    for i in range(1, 11):
         w = max(0, 1 - abs(tier_float - i))
         amount += w * SPEND_TIERS[i]
     total = int(amount)
