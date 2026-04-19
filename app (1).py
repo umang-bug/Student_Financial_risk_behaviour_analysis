@@ -531,15 +531,13 @@ def predict(place, unplanned, peer_inf, fin_conf,
     dist          = float(np.linalg.norm(weighted_user - weighted_safe))
     risk_score    = round(float(np.clip(M["rf_score_scaler"].transform([[dist]])[0][0], 1, 100)), 2)
 
-    # KMeans
-    km_row = {c: nn_row.get(c, 0.0) for c in M["km_cols"]}
-    km_df  = pd.DataFrame([km_row])[M["km_cols"]].astype(float)
-    raw_l  = int(M["km"].predict(M["km_scaler"].transform(km_df))[0])
-    cluster = M["km_fusion"].get(raw_l, 0)
-    cluster = min(cluster, len(PERSONAS)-1)
-
-    profiles    = M["km_profiles"]
-    cluster_avg = float(profiles.loc[cluster,"Risk_score"]) if cluster in profiles.index else risk_score
+    # Assign cluster by finding closest avg risk to user's RF risk score
+    # This keeps cluster and risk score always consistent
+    profiles = M["km_profiles"]
+    cluster  = min(profiles["Risk_score"].to_dict(),
+                   key=lambda c: abs(profiles.loc[c,"Risk_score"] - risk_score))
+    cluster  = min(int(cluster), len(PERSONAS)-1)
+    cluster_avg = float(profiles.loc[cluster,"Risk_score"])
 
     return {
         "spend_tier": spend_tier, "exp_spend": exp_spend,
@@ -704,31 +702,27 @@ def show_results():
 
             for c_id in range(cluster, -1, -1):
                 p       = PERSONAS[c_id]
-                r_val   = profiles.loc[c_id,"Risk_score"] if c_id in profiles.index else "?"
+                r_val   = profiles.loc[c_id, "Risk_score"] if c_id in profiles.index else 0
                 is_curr = c_id == cluster
                 is_goal = c_id == 0
                 bg      = "#f0fdf4" if is_goal else ("#eff6ff" if is_curr else "white")
-                border  = f"2px solid {p['color']}" if (is_curr or is_goal) else "1px solid #e2e8f0"
-                st.markdown(f"""
-                <div style="background:{bg};border:{border};border-radius:12px;
-                            padding:0.8rem 1.2rem;margin:0.4rem 0;
-                            display:flex;align-items:center;gap:1rem;">
-                  <span style="font-size:1.8rem;">{p['emoji']}</span>
-                  <div style="flex:1;">
-                    <div style="font-weight:700;color:#1a202c;">
-                      {p['name']}
-                      {"&nbsp;<span style='background:#eff6ff;color:#3b82f6;font-size:0.7rem;padding:0.1rem 0.5rem;border-radius:99px;'>YOU ARE HERE</span>" if is_curr else ""}
-                      {"&nbsp;<span style='background:#f0fdf4;color:#00c04b;font-size:0.7rem;padding:0.1rem 0.5rem;border-radius:99px;'>🏁 GOAL</span>" if is_goal else ""}
-                    </div>
-                    <div style="color:#64748b;font-size:0.82rem;">Avg Risk: ~{r_val:.0f}</div>
-                  </div>
-                  <div style="background:{p['color']}22;color:{p['color']};font-size:0.75rem;
-                              font-weight:700;border-radius:99px;padding:0.25rem 0.8rem;">
-                    {p['badge']}
-                  </div>
-                </div>
-                {"<div style='text-align:center;color:#94a3b8;font-size:1.2rem;margin:-0.1rem 0;'>↑</div>" if c_id > 0 else ""}
-                """, unsafe_allow_html=True)
+                border  = "2px solid " + p["color"] if (is_curr or is_goal) else "1px solid #e2e8f0"
+                here_badge = "&nbsp;<span style='background:#eff6ff;color:#3b82f6;font-size:0.7rem;padding:0.1rem 0.5rem;border-radius:99px;'>YOU ARE HERE</span>" if is_curr else ""
+                goal_badge = "&nbsp;<span style='background:#f0fdf4;color:#00c04b;font-size:0.7rem;padding:0.1rem 0.5rem;border-radius:99px;'>🏁 GOAL</span>" if is_goal else ""
+                arrow_html = "<div style='text-align:center;color:#94a3b8;font-size:1.2rem;margin:-0.1rem 0;'>↑</div>" if c_id > 0 else ""
+                card_html  = (
+                    f"<div style='background:{bg};border:{border};border-radius:12px;"
+                    f"padding:0.8rem 1.2rem;margin:0.4rem 0;display:flex;align-items:center;gap:1rem;'>"
+                    f"<span style='font-size:1.8rem;'>{p['emoji']}</span>"
+                    f"<div style='flex:1;'>"
+                    f"<div style='font-weight:700;color:#1a202c;'>{p['name']}{here_badge}{goal_badge}</div>"
+                    f"<div style='color:#64748b;font-size:0.82rem;'>Avg Risk: ~{r_val:.0f}</div>"
+                    f"</div>"
+                    f"<div style='background:{p['color']}22;color:{p['color']};font-size:0.75rem;"
+                    f"font-weight:700;border-radius:99px;padding:0.25rem 0.8rem;'>{p['badge']}</div>"
+                    f"</div>{arrow_html}"
+                )
+                st.markdown(card_html, unsafe_allow_html=True)
 
     # ── Footer ────────────────────────────────────────────────
     st.markdown("<br>", unsafe_allow_html=True)
