@@ -15,92 +15,50 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-html, body, [class*="css"] {
+/* ── Force light theme — prevent dark mode text visibility issues ── */
+html, body, [data-testid="stAppViewContainer"], .stApp {
     font-family: 'Inter', sans-serif !important;
+    background-color: #f0f4f8 !important;
+    color: #1a202c !important;
 }
+p, span, div, label, h1, h2, h3, h4, h5 { color: #1a202c !important; }
+.stSlider label, .stSelectbox label, .stRadio label,
+.stMultiSelect label, [data-testid="stWidgetLabel"] {
+    color: #1a202c !important; font-weight: 600 !important;
+}
+.stRadio [data-testid="stMarkdownContainer"] p { color: #1a202c !important; }
+[data-baseweb="select"] { background: white !important; }
+[data-baseweb="select"] * { color: #1a202c !important; }
+[data-testid="stExpander"] { background: white !important; border-radius: 12px !important; border: 1px solid #e2e8f0 !important; }
+[data-testid="stExpander"] summary { color: #1a202c !important; font-weight: 600 !important; }
+[data-testid="stAlert"] { border-radius: 12px !important; }
 
-/* Hide streamlit default header/footer */
 #MainMenu, footer, header { visibility: hidden; }
 
-/* Page background */
-.stApp { background: #f0f4f8; }
-
-/* Buttons */
 .stButton>button {
     background: linear-gradient(135deg, #00c04b, #00a040) !important;
     color: white !important; font-weight: 700 !important;
     font-size: 1rem !important; border-radius: 12px !important;
     border: none !important; padding: 0.65rem 2rem !important;
     box-shadow: 0 4px 15px rgba(0,192,75,0.35) !important;
-    transition: transform 0.15s ease !important;
+    transition: all 0.15s ease !important;
 }
-.stButton>button:hover { transform: translateY(-2px) !important; }
+.stButton>button:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 20px rgba(0,192,75,0.45) !important; }
 
-/* Cards */
-.metric-card {
-    background: white;
-    border-radius: 16px;
-    padding: 1.4rem 1.6rem;
-    box-shadow: 0 2px 16px rgba(0,0,0,0.07);
-    text-align: center;
-    margin-bottom: 1rem;
-}
-.persona-card {
-    background: white;
-    border-radius: 16px;
-    padding: 1.6rem 2rem;
-    box-shadow: 0 2px 20px rgba(0,0,0,0.08);
-    margin: 1rem 0;
-}
-.rec-card {
-    background: white;
-    border-radius: 12px;
-    padding: 1rem 1.4rem;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-    margin: 0.5rem 0;
-    border-left: 4px solid #00c04b;
-}
-.rec-card-orange { border-left-color: #f39c12 !important; }
-.rec-card-red    { border-left-color: #e74c3c !important; }
+.metric-card { background: #ffffff !important; border-radius: 16px; padding: 1.4rem 1.6rem; box-shadow: 0 2px 16px rgba(0,0,0,0.07); text-align: center; margin-bottom: 1rem; }
+.persona-card { background: #ffffff !important; border-radius: 16px; padding: 1.6rem 2rem; box-shadow: 0 2px 20px rgba(0,0,0,0.08); margin: 1rem 0; }
+.rec-card { background: #ffffff !important; border-radius: 12px; padding: 1rem 1.4rem; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin: 0.5rem 0; border-left: 4px solid #00c04b; }
 
-/* Section headers */
-.section-header {
-    background: linear-gradient(135deg, #1a1a2e, #16213e);
-    color: white;
-    border-radius: 16px;
-    padding: 1.2rem 1.8rem;
-    margin: 1.5rem 0 1rem 0;
-    font-size: 1.1rem;
-    font-weight: 700;
-}
+.scale-hint { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.4rem 0.9rem; font-size: 0.78rem; margin: -0.2rem 0 0.8rem 0; display: flex; justify-content: space-between; }
+.scale-hint span { color: #64748b !important; }
 
-/* Progress bar override */
-.stProgress > div > div { background: linear-gradient(90deg,#00c04b,#00e05a) !important; }
+.section-header { background: linear-gradient(135deg, #1a1a2e, #16213e); color: white !important; border-radius: 12px; padding: 0.9rem 1.5rem; margin: 1.5rem 0 1rem 0; font-size: 1rem; font-weight: 700; }
 
-/* Step indicator */
-.step-indicator {
-    display: flex; justify-content: center; gap: 0.6rem;
-    margin: 1rem 0 2rem 0;
-}
-.step-dot {
-    width: 36px; height: 36px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 0.85rem;
-}
-.step-active   { background: #00c04b; color: white; box-shadow: 0 0 0 3px rgba(0,192,75,0.3); }
-.step-done     { background: #e0f7ea; color: #00a040; }
-.step-inactive { background: #e2e8f0; color: #94a3b8; }
-
-/* Journey path */
-.journey-step {
-    background: white;
-    border-radius: 12px;
-    padding: 0.8rem 1.2rem;
-    margin: 0.4rem 0;
-    display: flex;
-    align-items: center;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.05);
-}
+.step-indicator { display: flex; justify-content: center; gap: 0.6rem; margin: 1rem 0 2rem 0; }
+.step-dot { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; }
+.step-active   { background: #00c04b; color: white !important; box-shadow: 0 0 0 3px rgba(0,192,75,0.3); }
+.step-done     { background: #d1fae5; color: #059669 !important; }
+.step-inactive { background: #e2e8f0; color: #94a3b8 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -209,7 +167,7 @@ if "results" not in st.session_state:
 # ══════════════════════════════════════════════════════════════
 def format_spend(tier_float):
     amount = 0
-    for i in range(1, 11):
+    for i in range(1, 10):
         w = max(0, 1 - abs(tier_float - i))
         amount += w * SPEND_TIERS[i]
     total = int(amount)
@@ -255,21 +213,27 @@ def risk_meter_svg(score, color):
 
 def spend_bar_html(tier, exp_spend):
     amount_str = format_spend(exp_spend)
-    pct = (tier / 10) * 100
+    pct   = (tier / 10) * 100
     color = "#00c04b" if tier <= 3 else ("#f39c12" if tier <= 6 else "#e74c3c")
-    return f"""
-    <div style="background:white;border-radius:16px;padding:1.4rem 1.6rem;
-                box-shadow:0 2px 16px rgba(0,0,0,0.07);text-align:center;">
-      <div style="font-size:0.75rem;font-weight:700;color:#718096;letter-spacing:1px;
-                  text-transform:uppercase;margin-bottom:0.4rem;">Monthly Spend</div>
-      <div style="font-size:2.4rem;font-weight:800;color:#1a202c;line-height:1.1;">{amount_str}</div>
-      <div style="font-size:0.8rem;color:#a0aec0;margin-bottom:0.8rem;">Tier {tier}/10</div>
-      <div style="background:#e2e8f0;border-radius:99px;height:8px;overflow:hidden;">
-        <div style="width:{pct}%;height:100%;background:{color};border-radius:99px;
-                    transition:width 0.6s ease;"></div>
-      </div>
-    </div>
-    """
+    label = "Low Spender" if tier <= 3 else ("Moderate Spender" if tier <= 6 else "High Spender")
+    tier_dots = "".join([
+        f"<div style=\'width:10px;height:10px;border-radius:50%;background:{'"+color+"' if i < tier else '#e2e8f0'};margin:1px;\'></div>"
+        for i in range(10)
+    ])
+    return (
+        f"<div style=\'background:#ffffff;border-radius:16px;padding:1.4rem 1.6rem;"
+        f"box-shadow:0 2px 16px rgba(0,0,0,0.07);text-align:center;\'>"
+        f"<div style=\'font-size:0.7rem;font-weight:700;color:#718096;letter-spacing:1.5px;"
+        f"text-transform:uppercase;margin-bottom:0.5rem;\'>Monthly Spend</div>"
+        f"<div style=\'font-size:2.6rem;font-weight:800;color:#1a202c;line-height:1;\'>{amount_str}</div>"
+        f"<div style=\'display:inline-block;background:{color}22;color:{color};font-size:0.7rem;"
+        f"font-weight:700;border-radius:99px;padding:0.2rem 0.7rem;margin:0.4rem 0;\'>{label}</div>"
+        f"<div style=\'background:#e2e8f0;border-radius:99px;height:6px;overflow:hidden;margin-top:0.6rem;\'>"
+        f"<div style=\'width:{pct}%;height:100%;background:{color};border-radius:99px;\'></div>"
+        f"</div>"
+        f"<div style=\'font-size:0.75rem;color:#a0aec0;margin-top:0.4rem;\'>Tier {tier} / 10</div>"
+        f"</div>"
+    )
 
 def step_indicator(current):
     steps = ["Welcome","Survey","Results"]
@@ -377,23 +341,24 @@ def show_survey():
         st.markdown('<div class="section-header">💸 Section 2 — Spending Behavior</div>', unsafe_allow_html=True)
         col1, col2 = st.columns(2)
         with col1:
-            unplanned = st.slider("🛍️ Frequency of unplanned purchases", 1, 5, 3,
-                                  help="1 = Never  |  5 = Very often")
-            fin_conf  = st.slider("💪 Financial management confidence",  1, 5, 3,
-                                  help="1 = Not confident  |  5 = Very confident")
+            unplanned = st.slider("🛍️ Frequency of unplanned purchases", 1, 5, 3)
+            st.markdown('<div class="scale-hint"><span>1 — I never buy without planning</span><span>5 — I buy impulsively very often</span></div>', unsafe_allow_html=True)
+            fin_conf  = st.slider("💪 Financial management confidence", 1, 5, 3)
+            st.markdown('<div class="scale-hint"><span>1 — I have no idea about my finances</span><span>5 — I manage money very well</span></div>', unsafe_allow_html=True)
         with col2:
-            peer_inf  = st.slider("👥 Peer pressure influence on spending", 1, 5, 3,
-                                  help="1 = Not at all  |  5 = Very much")
+            peer_inf  = st.slider("👥 Peer pressure influence on spending", 1, 5, 3)
+            st.markdown('<div class="scale-hint"><span>1 — Friends never affect my spending</span><span>5 — I always spend to match friends</span></div>', unsafe_allow_html=True)
 
         # ── Section 3 ────────────────────────────────────────
         st.markdown('<div class="section-header">🎯 Section 3 — Purchase Priorities</div>', unsafe_allow_html=True)
+        st.markdown('<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:0.6rem 1rem;font-size:0.82rem;color:#92400e;margin-bottom:0.8rem;">💡 Rate how much each factor influences your purchasing decision</div>', unsafe_allow_html=True)
         col1, col2 = st.columns(2)
         with col1:
-            price_imp   = st.select_slider("💲 Price / Cost",          IMP_OPTS, value="Slightly important")
-            peer_imp    = st.select_slider("👥 Peer Recommendation",   IMP_OPTS, value="Not important")
+            price_imp   = st.select_slider("💲 Price / Cost — Does price heavily influence what you buy?", IMP_OPTS, value="Slightly important")
+            peer_imp    = st.select_slider("👥 Peer Recommendation — Do you buy based on what friends suggest?", IMP_OPTS, value="Not important")
         with col2:
-            brand_imp   = st.select_slider("🏷️ Brand Reputation",      IMP_OPTS, value="Slightly important")
-            utility_imp = st.select_slider("🔧 Long-term Utility",      IMP_OPTS, value="Very important")
+            brand_imp   = st.select_slider("🏷️ Brand Reputation — Do you prefer branded products even if costly?", IMP_OPTS, value="Slightly important")
+            utility_imp = st.select_slider("🔧 Long-term Utility — Do you consider how long you will use it?", IMP_OPTS, value="Very important")
 
         # ── Section 4 ────────────────────────────────────────
         st.markdown('<div class="section-header">📈 Section 4 — Tracking & Patterns</div>', unsafe_allow_html=True)
