@@ -4,7 +4,8 @@ import pandas as pd
 import joblib
 
 st.set_page_config(
-    page_title="Student Financial Profiler | MNIT Jaipur",
+    page_title="Student Financial Behavior & Risk Profiling System
+ | MNIT Jaipur",
     page_icon="💰", layout="centered"
 )
 
