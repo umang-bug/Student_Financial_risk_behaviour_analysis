@@ -89,18 +89,52 @@ PERSONAS = {
 # Spend tier → approximate monthly amount (₹)
 SPEND_TIERS = {1:1500,2:2500,3:3500,4:4500,5:6000,6:7500,7:9000,8:11000,9:13500,10:16000}
 
+# (direction, title, action_tip, cost, your_issue, safer_group_note)
 FEATURE_ADVICE = {
-    "Unplanned_Purchases": ("decrease","Plan purchases in advance","Avoid browsing shopping apps without intent",2),
-    "Peer_Influence":      ("decrease","Resist peer-driven spending","Set your own budget, not based on friends",2),
-    "Finance_Confidence":  ("increase","Build financial confidence","Start tracking every expense for 30 days",1),
-    "Price_Importance":    ("increase","Compare prices before buying","Use price comparison apps before purchasing",1),
-    "Brand_Importance":    ("decrease","Choose value over brand","Try store brands for everyday items",2),
-    "Utility_Importance":  ("increase","Focus on long-term utility","Ask: will I use this 6 months from now?",1),
-    "Budget_Fashion":      ("decrease","Cut fashion spending","Set a clothing budget — max 1 purchase/month",2),
-    "Budget_Entertainment":("decrease","Reduce entertainment spend","Set a fixed ₹500/week fun budget",1),
-    "Budget_Subscriptions":("decrease","Audit your subscriptions","Cancel any subscription unused in 2+ weeks",1),
-    "Discounts(JBS)":      ("decrease","Avoid discount-triggered buying","Only buy on discount if it was already planned",1),
-    "Party(JBS)":          ("decrease","Control party spending","Pre-decide your social event budget each month",2),
+    "Unplanned_Purchases": ("decrease","Plan purchases in advance",
+        "Avoid opening shopping apps without a clear intent to buy.",2,
+        "You tend to make purchases that were not planned in advance.",
+        "People in the safer group almost always buy with a clear plan."),
+    "Peer_Influence":      ("decrease","Resist peer-driven spending",
+        "Set your own monthly budget and stick to it regardless of what friends spend.",2,
+        "Your spending is heavily driven by social situations and peer choices.",
+        "People in the safer group make spending decisions independently."),
+    "Finance_Confidence":  ("increase","Build financial confidence",
+        "Start tracking every expense daily for just 30 days to build awareness.",1,
+        "You feel uncertain or unconfident about managing your own finances.",
+        "People in the safer group actively track and plan their money."),
+    "Price_Importance":    ("increase","Compare prices before buying",
+        "Check at least 2-3 price options before any purchase above ₹200.",1,
+        "You rarely compare prices or look for better deals before buying.",
+        "People in the safer group consistently compare prices before spending."),
+    "Brand_Importance":    ("decrease","Choose value over brand",
+        "Try store-brand or unbranded alternatives for everyday purchases.",2,
+        "You tend to choose products based on brand name even when cheaper alternatives exist.",
+        "People in the safer group choose based on utility, not brand reputation."),
+    "Utility_Importance":  ("increase","Focus on long-term utility",
+        "Before buying, honestly ask: will I still be using this 6 months from now?",1,
+        "You often buy without fully considering how useful the item will be long-term.",
+        "People in the safer group always weigh long-term value before purchasing."),
+    "Budget_Fashion":      ("decrease","Cut fashion spending",
+        "Limit yourself to one clothing or fashion purchase per month at most.",2,
+        "Fashion and clothing is currently a significant part of your monthly budget.",
+        "People in the safer group allocate very little budget to fashion."),
+    "Budget_Entertainment":("decrease","Reduce entertainment spend",
+        "Set a fixed weekly entertainment budget — stop spending on it once reached.",1,
+        "Entertainment is taking up a notable portion of your monthly spending.",
+        "People in the safer group keep entertainment costs minimal."),
+    "Budget_Subscriptions":("decrease","Audit your subscriptions",
+        "List every active subscription and cancel anything unused in the past 2 weeks.",1,
+        "You are currently spending on multiple subscriptions.",
+        "People in the safer group minimise recurring subscription costs."),
+    "Discounts(JBS)":      ("decrease","Avoid discount-triggered buying",
+        "Remember: a discount is only a saving if you were already going to buy it.",1,
+        "You tend to justify unexpected large purchases because of discounts or deals.",
+        "People in the safer group do not let discounts trigger unplanned spending."),
+    "Party(JBS)":          ("decrease","Control social event spending",
+        "At the start of each month, decide a fixed budget for social events and stick to it.",2,
+        "You frequently justify large unplanned expenses for social celebrations.",
+        "People in the safer group keep social spending within planned limits."),
 }
 
 PLACE_OPTS   = ["🏙️ Big metro city","🏢 Medium-sized city","🏘️ Small town","🌾 Rural area"]
@@ -231,7 +265,7 @@ def spend_bar_html(tier, exp_spend):
         f"<div style=\'background:#e2e8f0;border-radius:99px;height:6px;overflow:hidden;margin-top:0.6rem;\'>"
         f"<div style=\'width:{pct}%;height:100%;background:{color};border-radius:99px;\'></div>"
         f"</div>"
-        f"<div style=\'font-size:0.75rem;color:#a0aec0;margin-top:0.4rem;\'>Tier {tier} / 10</div>"
+
         f"</div>"
     )
 
@@ -619,38 +653,42 @@ def show_results():
 
         # build recs
         recs = []
-        for feat, (direction, title, detail, cost) in FEATURE_ADVICE.items():
+        for feat, advice_tuple in FEATURE_ADVICE.items():
+            direction, title, action_tip, cost, your_issue, safer_note = advice_tuple
             if feat not in profiles.columns or cluster-1 not in profiles.index:
                 continue
             target_val = float(profiles.loc[cluster-1, feat])
             user_val   = float(nn_row.get(feat, 0))
             gap        = abs(user_val - target_val)
             if direction == "decrease" and user_val > target_val and gap > 0.05:
-                recs.append((gap/cost, title, detail, feat, user_val, target_val, cost))
+                recs.append((gap/cost, title, action_tip, your_issue, safer_note, feat))
             elif direction == "increase" and user_val < target_val and gap > 0.05:
-                recs.append((gap/cost, title, detail, feat, user_val, target_val, cost))
+                recs.append((gap/cost, title, action_tip, your_issue, safer_note, feat))
 
         recs.sort(reverse=True)
         PRIORITY_COLORS = ["#e74c3c","#f39c12","#3498db"]
         PRIORITY_LABELS = ["High Priority","Medium Priority","Low Priority"]
 
-        for i, (eff, title, detail, feat, uv, tv, cost) in enumerate(recs[:3]):
+        for i, (eff, title, action_tip, your_issue, safer_note, feat) in enumerate(recs[:3]):
             col = PRIORITY_COLORS[i]
             lbl = PRIORITY_LABELS[i]
             st.markdown(f"""
-            <div class="rec-card" style="border-left-color:{col};">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-                <div style="flex:1;">
-                  <div style="font-weight:700;color:#1a202c;font-size:1rem;">{i+1}. {title}</div>
-                  <div style="color:#64748b;font-size:0.88rem;margin-top:0.3rem;">{detail}</div>
-                  <div style="color:#94a3b8;font-size:0.78rem;margin-top:0.4rem;">
-                    Feature gap: <code>{feat}</code> &nbsp;{uv:.2f} → {tv:.2f}
-                  </div>
-                </div>
+            <div class="rec-card" style="border-left-color:{col};margin-bottom:0.8rem;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.6rem;">
+                <div style="font-weight:700;color:#1a202c;font-size:1rem;">{i+1}. {title}</div>
                 <div style="background:{col}22;color:{col};font-size:0.7rem;font-weight:700;
                             border-radius:99px;padding:0.25rem 0.7rem;white-space:nowrap;margin-left:1rem;">
                   {lbl}
                 </div>
+              </div>
+              <div style="background:#fff8f0;border-radius:8px;padding:0.5rem 0.8rem;margin-bottom:0.5rem;font-size:0.85rem;color:#92400e;">
+                ⚠️ <strong>Your pattern:</strong> {your_issue}
+              </div>
+              <div style="background:#f0fdf4;border-radius:8px;padding:0.5rem 0.8rem;margin-bottom:0.5rem;font-size:0.85rem;color:#166534;">
+                ✅ <strong>Safer group:</strong> {safer_note}
+              </div>
+              <div style="font-size:0.85rem;color:#3b82f6;margin-top:0.4rem;">
+                💡 <strong>What to do:</strong> {action_tip}
               </div>
             </div>
             """, unsafe_allow_html=True)
